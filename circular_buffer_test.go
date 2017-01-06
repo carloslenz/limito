@@ -11,24 +11,15 @@ func TestCircularBuffer(t *testing.T) {
 		cb := circularBuffer{buf: make([]chan struct{}, 2)}
 		i := 0
 		for ; i < 2; i++ {
-			if err := cb.add(nil); err != nil {
+			if _, err := cb.add(); err != nil {
 				t.Errorf("#%d failed, got %q, expected nil", i, err)
 			}
 		}
-		if err := cb.add(nil); err != errCircularBufferFull {
+		if _, err := cb.add(); err != errCircularBufferFull {
 			t.Errorf("#%d failed, got %q expected %q", i, err, errCircularBufferFull)
 		}
 	})
 	t.Run("Complex", func(t *testing.T) {
-		inputs := make([]chan struct{}, 9)
-		for i := 0; i < len(inputs); i++ {
-			c := make(chan struct{}, i)
-			for j := 0; j < i; j++ {
-				c <- struct{}{}
-			}
-			close(c)
-			inputs[i] = c
-		}
 		cb := circularBuffer{buf: make([]chan struct{}, 4)}
 
 		var (
@@ -37,11 +28,10 @@ func TestCircularBuffer(t *testing.T) {
 			errors  []string
 			indexes [][]int
 		)
+		ids := make(map[chan struct{}][]int, 4)
 		consume := func(c chan struct{}) {
-			var i int
-			for _ = range c {
-				i++
-			}
+			i := ids[c][0]
+			ids[c] = ids[c][1:]
 			sizes = append(sizes, i)
 		}
 		fmtError := func(err error, count int) string {
@@ -70,12 +60,16 @@ func TestCircularBuffer(t *testing.T) {
 		}
 
 		removeAll()
-		for len(inputs) > 0 {
+		inputs := 9
+		for inputs > 0 {
 			putIndexes()
-			if gotError(cb.add(inputs[0])) {
+			c, err := cb.add()
+			if gotError(err) {
 				removeAll()
 			} else {
-				inputs, count = inputs[1:], count+1
+				ids[c] = append(ids[c], 9-inputs)
+				inputs--
+				count++
 			}
 		}
 		removeAll()

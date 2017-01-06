@@ -13,18 +13,29 @@ var (
 	errCircularBufferEmpty = errors.New("circular buffer empty")
 )
 
-func (b *circularBuffer) add(c chan struct{}) error {
+func newCircularBuffer(n int) circularBuffer {
+	buf := make([]chan struct{}, n)
+	for i := 0; i < n; i++ {
+		buf[i] = make(chan struct{})
+	}
+
+	return circularBuffer{
+		buf: buf,
+	}
+}
+
+func (b *circularBuffer) add() (chan struct{}, error) {
 	n := len(b.buf)
 	if (b.read == b.write && b.read != 0) || b.write == n {
-		return errCircularBufferFull
+		return nil, errCircularBufferFull
 	}
 	next := b.write + 1
 	if next > n {
 		next %= n
 	}
-	b.buf[b.write%n] = c
+	c := b.buf[b.write%n]
 	b.write = next
-	return nil
+	return c, nil
 }
 
 func (b *circularBuffer) remove() (chan struct{}, error) {

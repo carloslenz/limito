@@ -17,9 +17,7 @@ type WaitList struct {
 // Beyond that, requests are rejected.
 func NewWaitList(max int) WaitList {
 	return WaitList{
-		waiting: circularBuffer{
-			buf: make([]chan struct{}, max),
-		},
+		waiting: newCircularBuffer(max),
 	}
 }
 
@@ -31,8 +29,7 @@ func (w *WaitList) Wait(ctx context.Context) error {
 		return nil
 	}
 
-	c := make(chan struct{})
-	err := w.waiting.add(c)
+	c, err := w.waiting.add()
 	w.blocked = true
 	w.mutex.Unlock()
 	if err != nil {
@@ -66,6 +63,6 @@ func (w *WaitList) Release() {
 		// Unexpected circularBuffer behavior: bug!
 		panic(err)
 	}
-	close(c)
+	c <- struct{}{}
 	w.mutex.Unlock()
 }
