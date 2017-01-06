@@ -42,7 +42,6 @@ func (m *middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 func (m *middleware) limit(id string) (*Limiter, error) {
 	m.Mutex.Lock()
-	defer m.Mutex.Unlock()
 
 	lim := m.limiters[id]
 	if lim == nil {
@@ -50,7 +49,10 @@ func (m *middleware) limit(id string) (*Limiter, error) {
 		lim = &l
 		m.limiters[id] = lim
 	}
-	return lim, lim.Enter()
+	err := lim.Enter()
+
+	m.Mutex.Unlock()
+	return lim, err
 }
 
 var errMiddlewareIDNotFound = errors.New("limito middleware ID: not found")

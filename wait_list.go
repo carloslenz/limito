@@ -54,16 +54,18 @@ func (w *WaitList) Wait(ctx context.Context) error {
 // No-op if the w is empty.
 func (w *WaitList) Release() {
 	w.mutex.Lock()
-	defer w.mutex.Unlock()
 
 	c, err := w.waiting.remove()
 	if err == errCircularBufferEmpty {
 		w.blocked = false
+		w.mutex.Unlock()
 		return
 	}
 	if err != nil {
+		w.mutex.Unlock()
 		// Unexpected circularBuffer behavior: bug!
 		panic(err)
 	}
 	close(c)
+	w.mutex.Unlock()
 }
