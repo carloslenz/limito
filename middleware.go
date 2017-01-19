@@ -27,7 +27,6 @@ func Middleware(n int, h http.Handler) http.Handler {
 
 const (
 	tooManyConcurrentRequests = "too many concurrent requests"
-	limitoMiddlewareID        = "LIMITO-MIDDLEWARE-ID"
 )
 
 func (m *middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
@@ -55,7 +54,13 @@ func (m *middleware) limit(id string) (*Limiter, error) {
 	return lim, err
 }
 
-var errMiddlewareIDNotFound = errors.New("limito middleware ID: not found")
+type middlewareKey int
+
+var (
+	limitoMiddlewareID middlewareKey = 1
+
+	errMiddlewareIDNotFound = errors.New("limito middleware ID: not found")
+)
 
 // GetMiddlewareID extracts ID from ctx. If there is ID, it panics.
 func GetMiddlewareID(ctx context.Context) string {
