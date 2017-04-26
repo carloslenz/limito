@@ -1,4 +1,3 @@
-// Package limito provides abstractions to limit concurrent operations.
 package limito
 
 import (
