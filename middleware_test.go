@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"sync"
 	"testing"
+	"time"
 )
 
 func ExampleMiddleware() {
@@ -26,32 +29,56 @@ func ExampleMiddleware() {
 
 func TestMiddleware(t *testing.T) {
 	c := make(chan int)
-	var res []int
 	f := Middleware(1, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		res = append(res, len(res))
-		// 1st request waits here, so the 2nd doesn't start thanks to the middleware.
 		c <- 0
+		rw.WriteHeader(http.StatusOK)
 	}))
+
+	var done sync.WaitGroup
+	var resp [4]*httptest.ResponseRecorder
+	serve := func(i int, ctx context.Context) {
+		rw := &httptest.ResponseRecorder{}
+		resp[i] = rw
+		done.Add(1)
+		defer done.Done()
+		// 1st request waits for chan, so the 2nd fails because limit is 1 and they have the same ID.
+		f.ServeHTTP(rw, (&http.Request{}).WithContext(ctx))
+	}
+
 	ctx := SetMiddlewareID(context.Background(), "test")
 	for i := 0; i < 2; i++ {
-		go func() {
-			f.ServeHTTP(nil, (&http.Request{}).WithContext(ctx))
-		}()
+		go serve(i, ctx)
 	}
 
-	var expected []int
-	check := func(i int, l ...int) {
-		expected = append(expected, l...)
-		a := fmt.Sprint(res)
-		b := fmt.Sprint(expected)
-		if a != b {
-			t.Errorf("#%d: failed, got %v, expected %v", i, a, b)
-		}
+	// This request is ok because the ID is different.
+	ctx2 := SetMiddlewareID(context.Background(), "another")
+	go serve(2, ctx2)
+
+	time.Sleep(10 * time.Millisecond) // So goroutines wait on chan.
+
+	<-c // 1st (or 2nd) request can continue.
+	<-c // 3rd request can continue.
+
+	done.Wait() // make sure 1st (or 2nd) and 3rd requestes have finished.
+
+	// Checking that the 1st ID can be used again
+	go serve(3, ctx)
+	<-c // 4th request can continue.
+
+	done.Wait() // make sure 4th request has finished.
+
+	var codes [len(resp)]int
+	for i := 0; i < len(resp); i++ {
+		codes[i] = resp[i].Code
 	}
 
-	check(-1)
-	for i := 0; i < 2; i++ {
-		<-c
-		check(i, i)
+	if codes[0] > codes[1] {
+		// swapping for comparison: due to concurrency there is no guarantee who arrives 1st (and succeeds).
+		codes[0], codes[1] = codes[1], codes[0]
+	}
+
+	expected := [len(resp)]int{200, 429, 200, 200}
+	if codes != expected {
+		t.Errorf("Unexpected HTTP status codes, got %#v, expected %#v", codes, expected)
 	}
 }

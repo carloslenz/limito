@@ -34,6 +34,7 @@ func (m *middleware) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	lim, err := m.limit(id)
 	if err != nil {
 		http.Error(rw, tooManyConcurrentRequests, http.StatusTooManyRequests)
+		return
 	}
 	defer lim.Leave()
 	m.Handler.ServeHTTP(rw, r)
