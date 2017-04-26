@@ -63,7 +63,7 @@ var (
 	errMiddlewareIDNotFound = errors.New("limito middleware ID: not found")
 )
 
-// GetMiddlewareID extracts ID from ctx. If there is ID, it panics.
+// GetMiddlewareID extracts ID from ctx. If there is no ID, it panics.
 func GetMiddlewareID(ctx context.Context) string {
 	if id, ok := ctx.Value(limitoMiddlewareID).(string); ok {
 		return id

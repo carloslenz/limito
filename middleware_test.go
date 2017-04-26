@@ -12,19 +12,22 @@ import (
 
 func ExampleMiddleware() {
 	f := Middleware(1, http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		fmt.Printf("hello %s", GetMiddlewareID(r.Context()))
+		fmt.Printf("hello %s\n", GetMiddlewareID(r.Context()))
 	}))
 
+	// Succeds for ID: john_doe
 	ctx := SetMiddlewareID(context.Background(), "john_doe")
 	f.ServeHTTP(nil, (&http.Request{}).WithContext(ctx))
 
+	// Panics due to missing ID.
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf(" - %s\n", err)
+			fmt.Printf("error: %s\n", err)
 		}
 	}()
 	f.ServeHTTP(nil, (&http.Request{}).WithContext(context.Background()))
-	// Output: hello john_doe - limito middleware ID: not found
+	// Output: hello john_doe
+	// error: limito middleware ID: not found
 }
 
 func TestMiddleware(t *testing.T) {
