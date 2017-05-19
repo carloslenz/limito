@@ -92,13 +92,13 @@ func TestCircularBuffer(t *testing.T) {
 		}
 
 		expectedIndexes := [][]int{
-			[]int{0, 0},                                                     // removing (failed)
-			[]int{0, 0}, []int{0, 1}, []int{0, 2}, []int{0, 3}, []int{0, 4}, // adding (last failed)
-			[]int{0, 4}, []int{1, 4}, []int{2, 4}, []int{3, 4}, []int{0, 0}, // removing (last failed)
-			[]int{0, 0}, []int{0, 1}, []int{0, 2}, []int{0, 3}, []int{0, 4}, // adding (last failed)
-			[]int{0, 4}, []int{1, 4}, []int{2, 4}, []int{3, 4}, []int{0, 0}, // removing (last failed)
-			[]int{0, 0}, []int{0, 1}, // adding
-			[]int{0, 0}, // removing
+			{0, 0},                                 // removing (failed)
+			{0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, // adding (last failed)
+			{0, 4}, {1, 4}, {2, 4}, {3, 4}, {0, 0}, // removing (last failed)
+			{0, 0}, {0, 1}, {0, 2}, {0, 3}, {0, 4}, // adding (last failed)
+			{0, 4}, {1, 4}, {2, 4}, {3, 4}, {0, 0}, // removing (last failed)
+			{0, 0}, {0, 1}, // adding
+			{0, 0}, // removing
 		}
 		if !reflect.DeepEqual(indexes, expectedIndexes) {
 			t.Errorf("indexes: failed, got %#v, expected %#v", indexes, expectedIndexes)
